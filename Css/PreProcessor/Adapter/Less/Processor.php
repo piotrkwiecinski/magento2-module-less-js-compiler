@@ -142,7 +142,7 @@ class Processor implements ContentProcessorInterface
         $args = $this->getConfigValueFromPath('dev/less_js_compiler/less_arguments');
         if ($args === null) {
             // default supplied args
-            $args = ['--no-color']; // for example: --ie-compat, --compress --math="always", ...
+            $args = ['--no-color']; // for example: --ie-compat, --compress, --math="always", ...
         } else {
             $args = explode(' ', $args);
         }

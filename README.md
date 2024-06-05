@@ -55,11 +55,11 @@ As the last step, in your deploy scripts, make sure you call `npm install --prod
 
 ## Configuration
 
-You have the opportunity to configure the arguments we send to the `node` and `lessc` commands.
+You have the opportunity to configure the arguments we send to the `lessc` and `node` commands.
 The defaults are:
 
-- `node --no-deprecation`
 - `lessc --no-color`
+- `node --no-deprecation`
 
 If you want to override the default arguments, you can do this by modifying your `app/etc/config.php` or `app/etc/env.php` file and adding something like this:
 
