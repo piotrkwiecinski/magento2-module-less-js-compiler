@@ -2,6 +2,7 @@
 
 namespace Baldwin\LessJsCompiler\Css\PreProcessor\Adapter\Less;
 
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Framework\Css\PreProcessor\File\Temporary;
 use Magento\Framework\Exception\LocalizedException;
@@ -25,6 +26,7 @@ class Processor implements ContentProcessorInterface
     private $productMetadata;
     private $filesystem;
     private $directoryList;
+    private $scopeConfig;
 
     public function __construct(
         LoggerInterface $logger,
@@ -33,7 +35,8 @@ class Processor implements ContentProcessorInterface
         ShellInterface $shell,
         ProductMetadataInterface $productMetadata,
         Filesystem $filesystem,
-        DirectoryList $directoryList
+        DirectoryList $directoryList,
+        ScopeConfigInterface $scopeConfig
     ) {
         $this->logger = $logger;
         $this->assetSource = $assetSource;
@@ -42,6 +45,7 @@ class Processor implements ContentProcessorInterface
         $this->productMetadata = $productMetadata;
         $this->filesystem = $filesystem;
         $this->directoryList = $directoryList;
+        $this->scopeConfig = $scopeConfig;
     }
 
     /**
@@ -89,24 +93,28 @@ class Processor implements ContentProcessorInterface
      */
     protected function compileFile($filePath)
     {
-        $nodeCmdArgs = $this->getNodeArgsAsString();
-        $lessCmdArgs = $this->getCompilerArgsAsString();
-        $cmd = "%s $nodeCmdArgs %s $lessCmdArgs %s";
+        $nodeCmdArgs = $this->getNodeArgsAsArray();
+        $lessCmdArgs = $this->getCompilerArgsAsArray();
+
+        $cmd = '%s ' . str_repeat(' %s', count($nodeCmdArgs)) . ' %s' . str_repeat(' %s', count($lessCmdArgs)) . ' %s';
+        $arguments = [];
+        $arguments[] = $this->getPathToNodeBinary();
+        $arguments = array_merge($arguments, $nodeCmdArgs);
+        $arguments[] = $this->getPathToLessCompiler();
+        $arguments = array_merge($arguments, $lessCmdArgs);
+        $arguments[] = $filePath;
 
         // to log or not to log, that's the question
         // also, it would be better to use the logger in the Shell class,
         // since that one will contain the exact correct command, and not this sprintf version
+        // $logArguments = array_map('escapeshellarg', $arguments);
         // $this->logger->debug('Less compilation command: `'
-        //     . sprintf($cmd, $this->getPathToNodeBinary(), $this->getPathToLessCompiler(), $filePath)
+        //     . sprintf($cmd, ...$logArguments)
         //     . '`');
 
         return $this->shell->execute(
             $cmd,
-            [
-                $this->getPathToNodeBinary(),
-                $this->getPathToLessCompiler(),
-                $filePath,
-            ]
+            $arguments
         );
     }
 
@@ -114,12 +122,32 @@ class Processor implements ContentProcessorInterface
      * Get all arguments which will be used in the cli call to the lessc compiler
      *
      * @return string
+     *
+     * @deprecated this is no longer being used, we've switched to getCompilerArgsAsArray
      */
     protected function getCompilerArgsAsString()
     {
         $args = ['--no-color']; // for example: --no-ie-compat, --no-js, --compress, ...
 
         return implode(' ', $args);
+    }
+
+    /**
+     * Get all arguments which will be used in the cli call to the lessc compiler
+     *
+     * @return array<string>
+     */
+    protected function getCompilerArgsAsArray()
+    {
+        $args = $this->getConfigValueFromPath('dev/less_js_compiler/less_arguments');
+        if ($args === null) {
+            // default supplied args
+            $args = ['--no-color']; // for example: --ie-compat, --compress --math="always", ...
+        } else {
+            $args = explode(' ', $args);
+        }
+
+        return $args;
     }
 
     /**
@@ -151,12 +179,32 @@ class Processor implements ContentProcessorInterface
      * Get all arguments which will be used in the cli call with the nodejs binary
      *
      * @return string
+     *
+     * @deprecated this is no longer being used, we've switched to getNodeArgsAsArray
      */
     protected function getNodeArgsAsString()
     {
         $args = ['--no-deprecation']; // squelch warnings about deprecated modules being used
 
         return implode(' ', $args);
+    }
+
+    /**
+     * Get all arguments which will be used in the cli call with the nodejs binary
+     *
+     * @return array<string>
+     */
+    protected function getNodeArgsAsArray()
+    {
+        $args = $this->getConfigValueFromPath('dev/less_js_compiler/node_arguments');
+        if ($args === null) {
+            // default supplied args
+            $args = ['--no-deprecation']; // squelch warnings about deprecated modules being used
+        } else {
+            $args = explode(' ', $args);
+        }
+
+        return $args;
     }
 
     /**
@@ -206,5 +254,20 @@ class Processor implements ContentProcessorInterface
             . PHP_EOL . $errorMessage;
 
         $this->logger->critical($errorMessage);
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return ?string
+     */
+    private function getConfigValueFromPath($path)
+    {
+        $value = $this->scopeConfig->getValue($path);
+        if (is_string($value)) {
+            return $value;
+        }
+
+        return null;
     }
 }
