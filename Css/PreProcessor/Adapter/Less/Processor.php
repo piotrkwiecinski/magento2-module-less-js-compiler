@@ -122,14 +122,16 @@ class Processor implements ContentProcessorInterface
      * Get all arguments which will be used in the cli call to the lessc compiler
      *
      * @return string
-     *
-     * @deprecated this is no longer being used, we've switched to getCompilerArgsAsArray
      */
     protected function getCompilerArgsAsString()
     {
-        $args = ['--no-color']; // for example: --no-ie-compat, --no-js, --compress, ...
+        $args = $this->getConfigValueFromPath('dev/less_js_compiler/less_arguments');
+        if ($args === null) {
+            // default supplied args
+            $args = '--no-color'; // for example: --ie-compat --compress --math="always", ...
+        }
 
-        return implode(' ', $args);
+        return $args;
     }
 
     /**
@@ -139,15 +141,7 @@ class Processor implements ContentProcessorInterface
      */
     protected function getCompilerArgsAsArray()
     {
-        $args = $this->getConfigValueFromPath('dev/less_js_compiler/less_arguments');
-        if ($args === null) {
-            // default supplied args
-            $args = ['--no-color']; // for example: --ie-compat, --compress, --math="always", ...
-        } else {
-            $args = explode(' ', $args);
-        }
-
-        return $args;
+        return explode(' ', $this->getCompilerArgsAsString());
     }
 
     /**
@@ -179,14 +173,16 @@ class Processor implements ContentProcessorInterface
      * Get all arguments which will be used in the cli call with the nodejs binary
      *
      * @return string
-     *
-     * @deprecated this is no longer being used, we've switched to getNodeArgsAsArray
      */
     protected function getNodeArgsAsString()
     {
-        $args = ['--no-deprecation']; // squelch warnings about deprecated modules being used
+        $args = $this->getConfigValueFromPath('dev/less_js_compiler/node_arguments');
+        if ($args === null) {
+            // default supplied args
+            $args = '--no-deprecation'; // squelch warnings about deprecated modules being used
+        }
 
-        return implode(' ', $args);
+        return $args;
     }
 
     /**
@@ -196,15 +192,7 @@ class Processor implements ContentProcessorInterface
      */
     protected function getNodeArgsAsArray()
     {
-        $args = $this->getConfigValueFromPath('dev/less_js_compiler/node_arguments');
-        if ($args === null) {
-            // default supplied args
-            $args = ['--no-deprecation']; // squelch warnings about deprecated modules being used
-        } else {
-            $args = explode(' ', $args);
-        }
-
-        return $args;
+        return explode(' ', $this->getNodeArgsAsString());
     }
 
     /**
