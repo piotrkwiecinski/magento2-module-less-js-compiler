@@ -23,7 +23,7 @@ You'll also need [composer](https://getcomposer.org/) to add this module to your
 First, we recommend you to install the less compiler itself, and save it into your `package.json` file as a production dependency:
 
 ```sh
-npm install --save less@1.7.5
+npm install --save less@3.13.1
 ```
 
 > Watch out: from Magento 2.1 onwards, the `package.json` file is being renamed to `package.json.sample` to enable you to have your own nodejs dependencies without Magento overwriting this every time with its own version each time you update Magento. So if you use Magento >= 2.1 make sure you copy the `package.json.sample` file to `package.json` before running the above command if you want to work with Magento's `grunt` setup.
@@ -53,6 +53,29 @@ bin/magento setup:upgrade
 
 As the last step, in your deploy scripts, make sure you call `npm install --production`. You should execute this somewhere between `composer install` and `bin/magento setup:static-content:deploy`
 
+## Configuration
+
+You have the opportunity to configure the arguments we send to the `lessc` and `node` commands.
+The defaults are:
+
+- `lessc --no-color`
+- `node --no-deprecation`
+
+If you want to override the default arguments, you can do this by modifying your `app/etc/config.php` or `app/etc/env.php` file and adding something like this:
+
+```php
+    'system' => [
+        'default' => [
+            'dev' => [
+                'less_js_compiler' => [
+                    'less_arguments' => '--no-color --ie-compat',
+                    'node_arguments' => '--no-deprecation --no-warnings',
+                ]
+            ]
+        ]
+    ]
+```
+
 ## Debugging less compilation errors
 
 When your `.less` files have a syntax error or contain something which doesn't allow it to compile properly, please have a look at the `var/log/system.log` file, it will contain the error what causes the problem.
@@ -60,11 +83,9 @@ When your `.less` files have a syntax error or contain something which doesn't a
 ## Remarks
 
 1. Installing this module will effectively replace the default less compiler from Magento2. If you want to go back to the default less compiler, you need to disable this module or uninstall it.
-2. We strongly recommend you to install less.js version 1.7.5, and not the very latest version (which is 2.7.1 at the time). Magento's built-in less.php library is based on less.js version 1.x and isn't compatible with 2.x. This means Magento has only tested their less files with a less compiler which is compatible with version 1.x of less. If you want to use version 2.x (which you certainly can), be aware that there might be subtle changes in the resulting css.  
-Also: if you use `grunt` or `gulp` in your frontend workflow, you are probably also using less.js version 1.7.5, so using this module makes sure what you see on the server is 100% exactly the same as on your developer machine.
-3. This module expects the less compiler to exist in `{MAGENTO_ROOT_DIR}/node_modules/.bin/lessc`, this is a hard coded path which is being used in the module. The compiler will end up there if you follow the installation steps above, but if for some reason you prefer to install your nodejs modules someplace else, then this module won't work. If somebody actually has this problem and has an idea how to make this path configurable (preferably without getting it from the database), please let me know!
-4. The default less processor in Magento 2 passes an option to the less compiler, which says it should [compress the resulting css file](https://github.com/magento/magento2/blob/6a40b41f6281c7d405cd78029d6becab1d837c87/lib/internal/Magento/Framework/Css/PreProcessor/Adapter/Less/Processor.php#L73). In this module, we have chosen not to do so, as we believe this isn't a task to be executed while compiling less files. It should be done further down the line, like for example during the minification phase. If someone disagrees with this, please let me know, I'm open to discussion about this.
-5. This module was tested against Magento versions 2.0.7, 2.1.0 - 2.1.9 and 2.2.0
+2. This module expects the less compiler to exist in `{MAGENTO_ROOT_DIR}/node_modules/.bin/lessc`, this is a hard coded path which is being used in the module. The compiler will end up there if you follow the installation steps above, but if for some reason you prefer to install your nodejs modules someplace else, then this module won't work. If somebody actually has this problem and wants us to make this configurable, please let me know!
+3. The default less processor in Magento 2 passes an option to the less compiler, which says it should [compress the resulting css file](https://github.com/magento/magento2/blob/6a40b41f6281c7d405cd78029d6becab1d837c87/lib/internal/Magento/Framework/Css/PreProcessor/Adapter/Less/Processor.php#L73). In this module, we have chosen not to do so, as we believe this isn't a task to be executed while compiling less files. It should be done further down the line, like for example during the minification phase. If someone disagrees with this, please let me know, I'm open to discussion about this.
+4. This module was tested against Magento versions 2.0.7, 2.1.x, 2.2.x, 2.3.x, 2.4.x
 
 ## Benchmarks
 
