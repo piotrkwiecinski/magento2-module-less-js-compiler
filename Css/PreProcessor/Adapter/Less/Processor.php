@@ -16,6 +16,7 @@ use Magento\Framework\View\Asset\ContentProcessorInterface;
 use Magento\Framework\View\Asset\File as AssetFile;
 use Magento\Framework\View\Asset\Source;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Process\Process;
 
 class Processor implements ContentProcessorInterface
 {
@@ -93,29 +94,37 @@ class Processor implements ContentProcessorInterface
      */
     protected function compileFile($filePath)
     {
-        $nodeCmdArgs = $this->getNodeArgsAsArray();
-        $lessCmdArgs = $this->getCompilerArgsAsArray();
+        $process = new Process([
+            $this->getPathToNodeBinary(),
+            ...$this->getNodeArgsAsArray(),
+            $this->getPathToLessCompiler(),
+            ...$this->getCompilerArgsAsArray(),
+            $filePath,
+        ]);
 
-        $cmd = '%s ' . str_repeat(' %s', count($nodeCmdArgs)) . ' %s' . str_repeat(' %s', count($lessCmdArgs)) . ' %s';
-        $arguments = [];
-        $arguments[] = $this->getPathToNodeBinary();
-        $arguments = array_merge($arguments, $nodeCmdArgs);
-        $arguments[] = $this->getPathToLessCompiler();
-        $arguments = array_merge($arguments, $lessCmdArgs);
-        $arguments[] = $filePath;
+        $process->run();
 
-        // to log or not to log, that's the question
-        // also, it would be better to use the logger in the Shell class,
-        // since that one will contain the exact correct command, and not this sprintf version
-        // $logArguments = array_map('escapeshellarg', $arguments);
-        // $this->logger->debug('Less compilation command: `'
-        //     . sprintf($cmd, ...$logArguments)
-        //     . '`');
+        if (!$process->isSuccessful()) {
+            $error = sprintf(
+                'The command "%s" failed.'."\n\nExit Code: %s(%s)\n\nWorking directory: %s",
+                $process->getCommandLine(),
+                $process->getExitCode(),
+                $process->getExitCodeText(),
+                $process->getWorkingDirectory()
+            );
 
-        return $this->shell->execute(
-            $cmd,
-            $arguments
-        );
+            if (!$process->isOutputDisabled()) {
+                $error .= sprintf(
+                    "\n\nOutput:\n================\n%s\n\nError Output:\n================\n%s",
+                    $process->getOutput(),
+                    $process->getErrorOutput()
+                );
+            }
+
+            throw new LocalizedException(__($error));
+        }
+
+        return $process->getOutput();
     }
 
     /**
